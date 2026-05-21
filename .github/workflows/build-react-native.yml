@@ -1,0 +1,26 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+name: React Native Build
+
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - 'src/react-native-app/**'
+      - '.github/workflows/react-native-build.yml'
+      - '.github/workflows/build-react-native.yml'
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - 'src/react-native-app/**'
+      - '.github/workflows/react-native-build.yml'
+      - '.github/workflows/build-react-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  react-native-android:
+    uses: ./.github/workflows/react-native-build.yml
