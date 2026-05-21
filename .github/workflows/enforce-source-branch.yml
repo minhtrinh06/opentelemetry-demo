@@ -1,0 +1,17 @@
+name: Enforce source branch
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure PR is from staging
+        run: |
+          if [ "${{ github.head_ref }}" != "staging" ]; then
+            echo "PR must come from 'staging' branch"
+            exit 1
+          fi
