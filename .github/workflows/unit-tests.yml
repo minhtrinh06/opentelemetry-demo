@@ -1,0 +1,32 @@
+name: Run Unit Tests
+
+on:
+  pull_request:
+    types:
+      - submitted
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  run-unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [development, staging, production]
+    environment: ${{ matrix.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Run Go unit tests
+        run: go test ./src/checkout/money/...
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Run C# unit tests
+        run: dotnet test src/cart/
