@@ -16,7 +16,8 @@ permissions:
 jobs:
   build:
     uses: ./.github/workflows/component-build-images.yml
-    environment: development
+    environment:
+      name: development
     with:
       push: true
       version: ${{ github.sha }}
