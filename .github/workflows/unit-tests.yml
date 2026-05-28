@@ -27,7 +27,7 @@ jobs:
           go-version-file: src/checkout/go.mod
 
       - name: Run Go unit tests
-        run: go test ./src/checkout/money/...
+        run: go test ./src/checkout/...
 
       - name: Set up .NET
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9  # v4.3.1
