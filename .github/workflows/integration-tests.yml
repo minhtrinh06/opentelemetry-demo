@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
   run-integration-tests:
@@ -22,8 +23,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4.0.0
+
       - name: Build images
-        run: make build
+        run: |
+          set -a
+          . ./.env
+          . ./.env.override
+          set +a
+          docker buildx bake \
+            -f docker-compose.yml \
+            --load \
+            --set "*.platform=linux/amd64" \
+            --set "*.cache-from=type=gha,scope=integration-${{ github.base_ref || github.ref_name }}" \
+            --set "*.cache-to=type=gha,mode=max,scope=integration-${{ github.base_ref || github.ref_name }}"
 
       - name: Run trace-based tests
         run: make run-tracetesting
