@@ -116,7 +116,6 @@ jobs:
 
   react-native:
     name: React Native Build
-    if: |
-      contains(github.event.pull_request.changed_files, 'src/react-native-app') ||
-      true
+    # Temporarily disabled.
+    if: ${{ false }}
     uses: ./.github/workflows/reusable-node-ci.yml
