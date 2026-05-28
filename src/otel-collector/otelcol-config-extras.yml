@@ -4,15 +4,49 @@
 # extra settings to be merged into OpenTelemetry Collector configuration
 # do not delete this file
 
-## Example configuration for sending data to your own OTLP HTTP backend
-## Note: the spanmetrics exporter must be included in the exporters array
-## if overriding the traces pipeline.
-##
-#  exporters:
-#    otlp_http/example:
-#      endpoint: <your-endpoint-url>
-#
-#  service:
-#    pipelines:
-#      traces:
-#        exporters: [spanmetrics, otlp_http/example]
+extensions:
+  datadog/extension:
+    api:
+      site: ${env:DD_SITE_PARAMETER}
+      key: ${env:DD_API_KEY}
+    http:
+      endpoint: "localhost:9875"
+      path: "/metadata"
+
+exporters:
+  datadog:
+    traces:
+      compute_stats_by_span_kind: true
+      trace_buffer: 500
+    api:
+      site: ${env:DD_SITE_PARAMETER}
+      key: ${env:DD_API_KEY}
+
+processors:
+  resource:
+    attributes:
+      - key: deployment.environment.name
+        value: "otel"
+        action: upsert
+
+connectors:
+  datadog/connector:
+    traces:
+      compute_stats_by_span_kind: true
+
+service:
+  extensions: [datadog/extension]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [resourcedetection, memory_limiter, resource, transform/sanitize_spans]
+      exporters: [otlp_grpc/jaeger, debug, span_metrics, datadog, datadog/connector]
+    metrics:
+      receivers: [datadog/connector, docker_stats, http_check/frontend-proxy, host_metrics, nginx, otlp, postgresql, redis, span_metrics]
+      processors: [resourcedetection, memory_limiter, resource]
+      exporters: [otlp_http/prometheus, debug, datadog]
+    logs:
+      receivers: [otlp]
+      processors: [resourcedetection, memory_limiter, resource]
+      exporters: [opensearch, debug, datadog]
+

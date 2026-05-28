@@ -1,0 +1,122 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - staging
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  enforce-branch:
+    name: Enforce Source Branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure PR is from correct source branch
+        run: |
+          if [ "${{ github.base_ref }}" = "main" ] && [ "${{ github.head_ref }}" != "staging" ]; then
+            echo "PRs to 'main' must come from 'staging' branch"
+            exit 1
+          fi
+          if [ "${{ github.base_ref }}" = "staging" ] && [ "${{ github.head_ref }}" != "development" ]; then
+            echo "PRs to 'staging' must come from 'development' branch"
+            exit 1
+          fi
+
+  lint-yaml:
+    name: Lint YAML
+    runs-on: ubuntu-latest
+    if: |
+      contains(github.event.pull_request.changed_files, '.yml') ||
+      contains(github.event.pull_request.changed_files, '.yaml') ||
+      true
+    steps:
+      - name: Check out code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: '3.x'
+      - name: Install yamllint
+        run: make install-yamllint
+      - name: Run yamllint
+        run: yamllint . -f github --strict
+
+  lint-markdown:
+    name: Lint Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Install dependencies
+        run: npm install
+      - name: Run markdownlint
+        run: make markdownlint
+      - name: Restore lychee cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        id: cache-restore
+        with:
+          path: .lycheecache
+          key: ${{ runner.os }}-lychee-${{ hashFiles('.lychee.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-lychee-
+      - name: Run lychee link check
+        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411  # v2.8.0
+        with:
+          args: --config .lychee.toml --cache --max-cache-age 3d --cache-exclude-status 300..=599 .
+          fail: true
+      - name: Save lychee cache
+        if: always()
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+        with:
+          path: .lycheecache
+          key: ${{ steps.cache-restore.outputs.cache-primary-key }}
+
+  lint-misspell:
+    name: Lint Misspell
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Run misspell
+        run: make misspell
+
+  lint-sanity:
+    name: Sanity Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Run sanitycheck.py
+        run: python3 ./internal/tools/sanitycheck.py
+
+  lint-weaver:
+    name: Weaver Registry Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Run weaver registry check
+        run: |
+          docker run --rm \
+            --mount "type=bind,source=${{ github.workspace }}/telemetry-schema,target=/home/weaver/source,readonly" \
+            otel/weaver:v0.22.1 \
+            registry check -r source
+
+  unit-tests:
+    uses: ./.github/workflows/unit-tests.yml
+    secrets: inherit
+
+  integration-tests:
+    needs: unit-tests
+    uses: ./.github/workflows/integration-tests.yml
+    secrets: inherit
+
+  react-native:
+    name: React Native Build
+    if: |
+      contains(github.event.pull_request.changed_files, 'src/react-native-app') ||
+      true
+    uses: ./.github/workflows/reusable-node-ci.yml
