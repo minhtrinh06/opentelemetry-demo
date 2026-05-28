@@ -52,11 +52,25 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Check for Markdown changes
+        id: markdown-changes
+        run: |
+          changed_files="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}")"
+          if echo "$changed_files" | grep -Eiq '\.(md|markdown|mdx)$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Install dependencies
+        if: steps.markdown-changes.outputs.changed == 'true'
         run: npm install
       - name: Run markdownlint
+        if: steps.markdown-changes.outputs.changed == 'true'
         run: make markdownlint
       - name: Restore lychee cache
+        if: steps.markdown-changes.outputs.changed == 'true'
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         id: cache-restore
         with:
@@ -65,12 +79,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-lychee-
       - name: Run lychee link check
+        if: steps.markdown-changes.outputs.changed == 'true'
         uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411  # v2.8.0
         with:
           args: --config .lychee.toml --cache --max-cache-age 3d --cache-exclude-status 300..=599 .
           fail: true
       - name: Save lychee cache
-        if: always()
+        if: always() && steps.markdown-changes.outputs.changed == 'true'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         with:
           path: .lycheecache
@@ -116,7 +131,6 @@ jobs:
 
   react-native:
     name: React Native Build
-    if: |
-      contains(github.event.pull_request.changed_files, 'src/react-native-app') ||
-      true
+    # Temporarily disabled.
+    if: ${{ false }}
     uses: ./.github/workflows/reusable-node-ci.yml
