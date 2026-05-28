@@ -1,7 +1,7 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-name: React Native Build
+name: Reusable Node CI
 
 on:
   workflow_call:

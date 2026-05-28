@@ -1,0 +1,21 @@
+name: Setup Node Monorepo
+description: Set up Node.js and install dependencies for the monorepo
+
+inputs:
+  node-version:
+    description: Node.js version to use
+    default: '20'
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
