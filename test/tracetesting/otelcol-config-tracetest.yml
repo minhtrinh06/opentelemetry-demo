@@ -11,4 +11,4 @@ service:
   pipelines:
     traces:
       processors: []
-      exporters: [debug, spanmetrics, otlp/tracetest]
+      exporters: [debug, span_metrics, otlp/tracetest]

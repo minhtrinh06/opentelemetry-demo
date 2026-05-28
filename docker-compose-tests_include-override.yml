@@ -4,7 +4,7 @@
 services:
 
   otel-collector:
-    command: [ "--config=/etc/otelcol-config.yml", "--config=/etc/otelcol-config-tracetest.yml" ]
+    command: [ "--config=/etc/otelcol-config.yml", "--config=/etc/otelcol-config-tracetest.yml", "--feature-gates=service.profilesSupport" ]
     environment:
       - ENVOY_PORT
       - OTEL_COLLECTOR_HOST

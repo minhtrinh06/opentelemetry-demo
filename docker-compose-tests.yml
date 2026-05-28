@@ -124,7 +124,7 @@ services:
     image: ${POSTGRES_IMAGE}
     container_name: tracetest-postgres
     environment:
-      - POSTGRES_PASSWORD
+      - POSTGRES_PASSWORD=postgres
     healthcheck:
       test: pg_isready
       interval: 1s
