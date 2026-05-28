@@ -32,7 +32,7 @@ jobs:
         with:
           languages: java
           api_key: ${{ secrets.DD_API_KEY }}
-          site: datadoghq.com # Change if your site is not US1
+          site: datadoghq.com
 
       - name: Run Go unit tests
         working-directory: src/checkout
