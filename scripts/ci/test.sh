@@ -8,7 +8,7 @@ MODE="${1:-unit}"
 case "$MODE" in
   unit)
     echo "--- Running Go unit tests ---"
-    go test ./src/checkout/money/...
+    go test ./src/checkout/...
 
     echo "--- Running C# unit tests ---"
     dotnet test src/cart/
