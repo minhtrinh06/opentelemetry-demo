@@ -34,6 +34,7 @@ jobs:
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "targets=" >> "$GITHUB_OUTPUT"
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "tests_changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -43,7 +44,9 @@ jobs:
           if echo "$changed_files" | grep -Eq '^(docker-compose[^/]*\.yml|\.env(\.override)?|buildkitd\.toml)$'; then
             echo "Shared build configuration changed; building all services."
             echo "targets=" >> "$GITHUB_OUTPUT"
+            echo "services=" >> "$GITHUB_OUTPUT"
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "tests_changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -56,16 +59,27 @@ jobs:
               esac
             done | sort -u | tr '\n' ' '
           )"
+          tests_changed=false
+          if echo "$changed_files" | grep -Eq '^(test/tracetesting|pb)/'; then
+            tests_changed=true
+          fi
 
           if [ -z "$services" ]; then
             echo "No service source changes detected; skipping image build."
             echo "targets=" >> "$GITHUB_OUTPUT"
+            echo "services=" >> "$GITHUB_OUTPUT"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "Building affected services: $services"
             echo "targets=$services" >> "$GITHUB_OUTPUT"
+            if [ "$tests_changed" = true ]; then
+              echo "services=" >> "$GITHUB_OUTPUT"
+            else
+              echo "services=$services" >> "$GITHUB_OUTPUT"
+            fi
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
+          echo "tests_changed=$tests_changed" >> "$GITHUB_OUTPUT"
 
       - name: Build images
         if: steps.affected-services.outputs.skip == 'false'
@@ -83,5 +97,17 @@ jobs:
             --set "*.cache-to=type=gha,mode=max,scope=integration-${{ github.base_ref || github.ref_name }}" \
             "${bake_targets[@]}"
 
+      - name: Build trace-based test image
+        if: steps.affected-services.outputs.tests_changed == 'true'
+        run: docker compose --env-file .env --env-file .env.override -f docker-compose-tests.yml build traceBasedTests
+
       - name: Run trace-based tests
+        env:
+          SERVICES_TO_TEST: ${{ steps.affected-services.outputs.services }}
         run: make run-tracetesting
+
+      - name: Show trace-based test logs
+        if: failure()
+        run: |
+          docker compose --env-file .env --env-file .env.override -f docker-compose-tests.yml ps
+          docker compose --env-file .env --env-file .env.override -f docker-compose-tests.yml logs tracetest-server tracetest-postgres otel-collector traceBasedTests
